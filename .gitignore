@@ -1,0 +1,6 @@
+*.png
+*jpg
+*.pyc
+.pre-commit-config.yaml
+/samples
+/tilke.egg-info

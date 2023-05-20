@@ -1,0 +1,7 @@
+imageio==2.25.1
+matplotlib==3.6.3
+noise==1.2.2
+numpy==1.24.2
+Pillow==9.4.0
+scipy==1.10.0
+tqdm==4.64.1
