@@ -149,6 +149,10 @@ circuit = generate_circuit(track_params=track)
 
 </details>
 
+## Origin
+
+Built at [BCN eMotorsport](https://www.linkedin.com/posts/albert-rodas-6118191ab_bcnemotorsport-formulastudent-tilke-activity-7039598872565800960-jgSU) to generate regulation-compliant circuits for testing autonomous driving algorithms in Formula Student.
+
 ## Development
 
 ```bash
