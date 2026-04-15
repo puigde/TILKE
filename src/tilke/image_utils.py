@@ -21,9 +21,14 @@ def fig2data(fig: plt.Figure) -> np.ndarray:
     fig.canvas.draw()
     w, h = fig.canvas.get_width_height()
     buf = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
-    buf = buf.reshape((w, h, 4))
+    # On HiDPI/retina displays the physical buffer may be larger than logical (w, h).
+    # Derive the actual pixel dimensions from the buffer length.
+    import math
+    scale = int(math.sqrt(buf.size / (h * w * 4)))
+    ph, pw = h * scale, w * scale
+    buf = buf.reshape((ph, pw, 4))
     buf = np.roll(buf, 3, axis=2)
-    image = Image.frombytes("RGBA", (w, h), buf.tobytes())
+    image = Image.frombytes("RGBA", (pw, ph), buf.tobytes())
     return np.asarray(image)
 
 
