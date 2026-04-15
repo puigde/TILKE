@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
 from scipy.ndimage import distance_transform_cdt
 
 
@@ -17,19 +16,8 @@ def fig2data(fig: plt.Figure) -> np.ndarray:
     Returns:
         RGBA image array of shape (H, W, 4).
     """
-    plt.axis("off")
     fig.canvas.draw()
-    w, h = fig.canvas.get_width_height()
-    buf = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
-    # On HiDPI/retina displays the physical buffer may be larger than logical (w, h).
-    # Derive the actual pixel dimensions from the buffer length.
-    import math
-    scale = int(math.sqrt(buf.size / (h * w * 4)))
-    ph, pw = h * scale, w * scale
-    buf = buf.reshape((ph, pw, 4))
-    buf = np.roll(buf, 3, axis=2)
-    image = Image.frombytes("RGBA", (pw, ph), buf.tobytes())
-    return np.asarray(image)
+    return np.asarray(fig.canvas.buffer_rgba())
 
 
 def apply_distance_transform(image: np.ndarray) -> np.ndarray:
