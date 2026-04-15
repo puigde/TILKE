@@ -87,20 +87,17 @@ def get_int_ext_splines(
         (interior_spline, exterior_spline)
     """
     steps = np.linspace(spline.t[0], spline.t[-1], math.floor(spline.t[-1] / stepsize))
-    x_int, x_ext, y_int, y_ext = [], [], [], []
-    for s in steps:
-        pos = evaluate(spline, s)
-        vel = evaluate(spline, s, der=1)
-        x, y = pos[0], pos[1]
-        dx, dy = vel[0], vel[1]
-        scale = dist / np.sqrt(dx**2 + dy**2)
-        x_int.append(x + scale * dy)
-        y_int.append(y - scale * dx)
-        x_ext.append(x - scale * dy)
-        y_ext.append(y + scale * dx)
+    pos = evaluate(spline, steps)  # (N, 2)
+    vel = evaluate(spline, steps, der=1)  # (N, 2)
 
-    int_data = [x_int[::sampling_factor], y_int[::sampling_factor]]
-    ext_data = [x_ext[::sampling_factor], y_ext[::sampling_factor]]
+    scale = dist / np.sqrt(vel[:, 0] ** 2 + vel[:, 1] ** 2)  # (N,)
+    x_int = pos[:, 0] + scale * vel[:, 1]
+    y_int = pos[:, 1] - scale * vel[:, 0]
+    x_ext = pos[:, 0] - scale * vel[:, 1]
+    y_ext = pos[:, 1] + scale * vel[:, 0]
+
+    int_data = [x_int[::sampling_factor].tolist(), y_int[::sampling_factor].tolist()]
+    ext_data = [x_ext[::sampling_factor].tolist(), y_ext[::sampling_factor].tolist()]
     return make_spline(int_data, s=smoothing), make_spline(ext_data, s=smoothing)
 
 

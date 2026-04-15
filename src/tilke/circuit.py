@@ -10,13 +10,13 @@ from datetime import datetime
 
 import imageio
 import matplotlib.pyplot as plt
-import noise
 import numpy as np
 from matplotlib.patches import Polygon
 from scipy.spatial import KDTree
 
 from tilke import image_utils
 from tilke.curve_generator import CurveGeneratorConfig, generate_middle_curve
+from tilke.perlin import pnoise1
 from tilke.spline import Spline, evaluate, get_int_ext_splines, make_spline
 
 # ---------------------------------------------------------------------------
@@ -190,39 +190,36 @@ def generate_circuit(
 # ---------------------------------------------------------------------------
 
 
-def _curvature_radius(d1: np.ndarray, d2: np.ndarray) -> float:
-    """Compute the radius of curvature from first and second derivatives."""
-    return ((d1[0] ** 2 + d1[1] ** 2) ** (3 / 2)) / np.abs(d1[0] * d2[1] - d1[1] * d2[0])
-
-
 def check_curvature(circuit: Circuit, restrictions: CircuitRestrictions) -> bool:
     """Check that all three curves satisfy minimum curvature radius constraints."""
-    curves = {
-        "middle": (
+    r = restrictions
+    curves = [
+        (
             circuit.middle_curve,
-            restrictions.min_curvature_radius_middle_curve,
-            restrictions.stepsize_middle_curvature_checking,
+            r.min_curvature_radius_middle_curve,
+            r.stepsize_middle_curvature_checking,
         ),
-        "interior": (
+        (
             circuit.interior_curve,
-            restrictions.min_curvature_radius_interior_curve,
-            restrictions.stepsize_interior_curvature_checking,
+            r.min_curvature_radius_interior_curve,
+            r.stepsize_interior_curvature_checking,
         ),
-        "exterior": (
+        (
             circuit.exterior_curve,
-            restrictions.min_curvature_radius_exterior_curve,
-            restrictions.stepsize_exterior_curvature_checking,
+            r.min_curvature_radius_exterior_curve,
+            r.stepsize_exterior_curvature_checking,
         ),
-    }
-    all_ok = True
-    for curve, min_radius, stepsize in curves.values():
+    ]
+    for curve, min_radius, stepsize in curves:
         steps = np.linspace(curve.t[0], curve.t[-1], math.floor(curve.t[-1] / stepsize))
-        d1 = evaluate(curve, steps, der=1)
-        d2 = evaluate(curve, steps, der=2)
-        radii = np.array([_curvature_radius(d1[i], d2[i]) for i in range(len(steps))])
+        d1 = evaluate(curve, steps, der=1)  # (N, 2)
+        d2 = evaluate(curve, steps, der=2)  # (N, 2)
+        speed_cubed = (d1[:, 0] ** 2 + d1[:, 1] ** 2) ** 1.5
+        cross = np.abs(d1[:, 0] * d2[:, 1] - d1[:, 1] * d2[:, 0])
+        radii = speed_cubed / cross
         if np.any(radii < min_radius):
-            all_ok = False
-    return all_ok
+            return False
+    return True
 
 
 def check_distances(circuit: Circuit, restrictions: CircuitRestrictions) -> bool:
@@ -309,23 +306,30 @@ def _populate_naive(circuit: Circuit, n_cones: int) -> tuple[np.ndarray, np.ndar
     upscale = circuit.exterior_curve.t[-1] / circuit.interior_curve.t[-1]
     n_interior = n_cones // 2
     int_positions = np.linspace(0, circuit.interior_curve.t[-1], n_interior)
-    int_cones = np.array([evaluate(circuit.interior_curve, t) for t in int_positions])
-    ext_cones = np.array([evaluate(circuit.exterior_curve, t * upscale) for t in int_positions])
+    int_cones = evaluate(circuit.interior_curve, int_positions)
+    ext_cones = evaluate(circuit.exterior_curve, int_positions * upscale)
     return int_cones, ext_cones
+
+
+def _apply_perlin_offsets(positions: np.ndarray, max_t: float) -> np.ndarray:
+    """Apply Perlin noise offsets to cone positions, truncating at max_t."""
+    offsets = pnoise1(positions)
+    positions = np.clip(positions + offsets, positions[0], max_t)
+    # Truncate at first position that hits max_t
+    over = np.where(positions >= max_t)[0]
+    if len(over) > 0:
+        positions = positions[: over[0] + 1]
+        positions[-1] = max_t
+    return positions
 
 
 def _populate_perlin(circuit: Circuit, n_cones: int) -> tuple[np.ndarray, np.ndarray]:
     upscale = circuit.exterior_curve.t[-1] / circuit.interior_curve.t[-1]
     n_interior = n_cones // 2
     positions = np.linspace(0, circuit.interior_curve.t[-1], n_interior)
-    max_t = circuit.interior_curve.t[-1]
-    for i, val in enumerate(positions):
-        positions[i] = min(val + noise.pnoise1(val), max_t)
-        if positions[i] >= max_t:
-            positions = positions[: i + 1]
-            break
-    int_cones = np.array([evaluate(circuit.interior_curve, t) for t in positions])
-    ext_cones = np.array([evaluate(circuit.exterior_curve, t * upscale) for t in positions])
+    positions = _apply_perlin_offsets(positions, circuit.interior_curve.t[-1])
+    int_cones = evaluate(circuit.interior_curve, positions)
+    ext_cones = evaluate(circuit.exterior_curve, positions * upscale)
     return int_cones, ext_cones
 
 
@@ -346,23 +350,12 @@ def _populate_random(
     ext_positions = np.linspace(
         circuit.exterior_curve.t[0], circuit.exterior_curve.t[-1], n_exterior
     )
-    int_max = circuit.interior_curve.t[-1]
-    ext_max = circuit.exterior_curve.t[-1]
 
-    for i, val in enumerate(int_positions):
-        int_positions[i] = min(val + noise.pnoise1(val), int_max)
-        if int_positions[i] >= int_max:
-            int_positions = int_positions[: i + 1]
-            break
+    int_positions = _apply_perlin_offsets(int_positions, circuit.interior_curve.t[-1])
+    ext_positions = _apply_perlin_offsets(ext_positions, circuit.exterior_curve.t[-1])
 
-    for i, val in enumerate(ext_positions):
-        ext_positions[i] = min(val + noise.pnoise1(val), ext_max)
-        if ext_positions[i] >= ext_max:
-            ext_positions = ext_positions[: i + 1]
-            break
-
-    int_cones = np.array([evaluate(circuit.interior_curve, t) for t in int_positions])
-    ext_cones = np.array([evaluate(circuit.exterior_curve, t) for t in ext_positions])
+    int_cones = evaluate(circuit.interior_curve, int_positions)
+    ext_cones = evaluate(circuit.exterior_curve, ext_positions)
     return int_cones, ext_cones
 
 
@@ -446,13 +439,16 @@ def _generate_false_cones(
     max_x, max_y = reference_cones.max(axis=0)
     max_x += random.uniform(0, 80)
     max_y += random.uniform(0, 80)
-    false = []
-    for _ in range(total_cone_count):
-        if random.random() < false_positive_prob:
-            false.append([random.uniform(min_x, max_x), random.uniform(min_y, max_y)])
-    if not false:
+    # Determine how many false cones to generate (binomial draw)
+    n_false = np.random.binomial(total_cone_count, false_positive_prob)
+    if n_false == 0:
         return np.empty((0, 2))
-    return np.array(false)
+    return np.column_stack(
+        [
+            np.random.uniform(min_x, max_x, n_false),
+            np.random.uniform(min_y, max_y, n_false),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------

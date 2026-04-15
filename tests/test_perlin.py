@@ -1,28 +1,38 @@
 import numpy as np
-import noise
+import pytest
 
 from tilke.perlin import pnoise1
 
+try:
+    import noise as _noise_c
+
+    HAS_C_NOISE = True
+except ImportError:
+    HAS_C_NOISE = False
+
 
 class TestPnoise1:
+    @pytest.mark.skipif(not HAS_C_NOISE, reason="C noise library not installed")
     def test_matches_c_library_positive(self):
         """Numpy pnoise1 matches C noise.pnoise1 for positive values."""
         x_vals = np.linspace(0.1, 100, 1000)
-        c_results = np.array([noise.pnoise1(float(x)) for x in x_vals])
+        c_results = np.array([_noise_c.pnoise1(float(x)) for x in x_vals])
         np_results = pnoise1(x_vals)
         np.testing.assert_allclose(np_results, c_results, atol=1e-4)
 
+    @pytest.mark.skipif(not HAS_C_NOISE, reason="C noise library not installed")
     def test_matches_c_library_negative(self):
         """Numpy pnoise1 matches C noise.pnoise1 for negative values."""
         x_vals = np.linspace(-100, -0.1, 1000)
-        c_results = np.array([noise.pnoise1(float(x)) for x in x_vals])
+        c_results = np.array([_noise_c.pnoise1(float(x)) for x in x_vals])
         np_results = pnoise1(x_vals)
         np.testing.assert_allclose(np_results, c_results, atol=1e-4)
 
+    @pytest.mark.skipif(not HAS_C_NOISE, reason="C noise library not installed")
     def test_matches_c_library_multi_octave(self):
         """Multi-octave mode matches C library."""
         x_vals = np.linspace(-50, 50, 200)
-        c_results = np.array([noise.pnoise1(float(x), octaves=4) for x in x_vals])
+        c_results = np.array([_noise_c.pnoise1(float(x), octaves=4) for x in x_vals])
         np_results = np.array([pnoise1(float(x), octaves=4) for x in x_vals])
         np.testing.assert_allclose(np_results, c_results, atol=1e-4)
 
