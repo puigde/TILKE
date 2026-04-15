@@ -2,7 +2,9 @@
 
 Generate randomized Formula-style racing circuits.
 
-![](media/circuits.gif)
+<p align="center">
+  <img src="media/circuits.gif" />
+</p>
 
 ## Get started
 
@@ -20,7 +22,9 @@ circuit = populate_cones(circuit)
 plot_circuit(circuit)
 ```
 
-![](media/quickstart.gif)
+<p align="center">
+  <img src="media/quickstart.gif" />
+</p>
 
 Every call produces a different layout. Pin a seed for reproducibility:
 
@@ -28,7 +32,9 @@ Every call produces a different layout. Pin a seed for reproducibility:
 circuit = generate_circuit(seed=1337)
 ```
 
-![](media/seeds.gif)
+<p align="center">
+  <img src="media/seeds.gif" />
+</p>
 
 ## Place cones along the track
 
@@ -40,7 +46,9 @@ populate_cones(circuit, method="perlin")   # default
 populate_cones(circuit, method="random")
 ```
 
-![](media/cones.gif)
+<p align="center">
+  <img src="media/cones.gif" />
+</p>
 
 ## Simulate noisy detection
 
@@ -52,7 +60,9 @@ from tilke import contaminate_cones
 noisy = contaminate_cones(circuit)
 ```
 
-![](media/contamination.gif)
+<p align="center">
+  <img src="media/contamination.gif" />
+</p>
 
 ## Export
 
