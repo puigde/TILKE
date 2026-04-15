@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import math
+import os
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -13,8 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Polygon
 from scipy.spatial import KDTree
+from tqdm import tqdm
 
-from tilke import image_utils
 from tilke.curve_generator import CurveGeneratorConfig, generate_middle_curve
 from tilke.perlin import pnoise1
 from tilke.spline import Spline, evaluate, get_int_ext_splines, make_spline
@@ -83,6 +84,20 @@ class Circuit:
     interior_cones: np.ndarray = field(default_factory=lambda: np.empty((0, 2)))
     exterior_cones: np.ndarray = field(default_factory=lambda: np.empty((0, 2)))
     false_cones: np.ndarray = field(default_factory=lambda: np.empty((0, 2)))
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _rgba(r: int, g: int, b: int) -> tuple[float, float, float, float]:
+    return (r / 255, g / 255, b / 255, 1.0)
+
+
+def _fig2data(fig: plt.Figure) -> np.ndarray:
+    fig.canvas.draw()
+    return np.asarray(fig.canvas.buffer_rgba())
 
 
 # ---------------------------------------------------------------------------
@@ -497,24 +512,24 @@ def circuit_to_image(
         (circuit_image, track_label, cones_input) — all uint8 numpy arrays.
     """
     curve_colors = {
-        "middle": image_utils.rgb_to_rgba(0, 255, 255),
-        "interior": image_utils.rgb_to_rgba(255, 0, 0),
-        "exterior": image_utils.rgb_to_rgba(0, 255, 0),
+        "middle": _rgba(0, 255, 255),
+        "interior": _rgba(255, 0, 0),
+        "exterior": _rgba(0, 255, 0),
     }
     label_colors = {
-        "middle": image_utils.rgb_to_rgba(0, 0, 0),
-        "interior": image_utils.rgb_to_rgba(255, 255, 255),
-        "exterior": image_utils.rgb_to_rgba(255, 255, 255),
+        "middle": _rgba(0, 0, 0),
+        "interior": _rgba(255, 255, 255),
+        "exterior": _rgba(255, 255, 255),
     }
     zone_colors = {
-        "inside": image_utils.rgb_to_rgba(255, 255, 0),
-        "track": image_utils.rgb_to_rgba(0, 0, 255),
+        "inside": _rgba(255, 255, 0),
+        "track": _rgba(0, 0, 255),
     }
     label_zone_colors = {
-        "inside": image_utils.rgb_to_rgba(255, 255, 255),
-        "track": image_utils.rgb_to_rgba(0, 0, 0),
+        "inside": _rgba(255, 255, 255),
+        "track": _rgba(0, 0, 0),
     }
-    cone_color = image_utils.rgb_to_rgba(0, 0, 0)
+    cone_color = _rgba(0, 0, 0)
 
     fig, ax = plt.subplots()
     fig2, ax2 = plt.subplots()
@@ -552,9 +567,9 @@ def circuit_to_image(
             ax3.scatter(circuit.false_cones[:, 0], circuit.false_cones[:, 1], color=cone_color, s=1)
             ax2.scatter(circuit.false_cones[:, 0], circuit.false_cones[:, 1], color="w", s=1)
 
-    im = image_utils.fig2data(fig)
-    model_label = image_utils.fig2data(fig2)
-    model_input = image_utils.fig2data(fig3)
+    im = _fig2data(fig)
+    model_label = _fig2data(fig2)
+    model_input = _fig2data(fig3)
     plt.close(fig)
     plt.close(fig2)
     plt.close(fig3)
@@ -620,3 +635,38 @@ def circuit_to_csv(
                     writer.writerow(
                         [round(float(curve.data[0, i]), 4), round(float(curve.data[1, i]), 4)]
                     )
+
+
+# ---------------------------------------------------------------------------
+# Batch generation
+# ---------------------------------------------------------------------------
+
+
+def get_sample_csv(
+    n: int,
+    path: str,
+    contaminated: bool = False,
+    include_false_cones: bool = True,
+    include_track_points: bool = True,
+) -> None:
+    """Generate n circuit CSV files in the given directory.
+
+    Args:
+        n: Number of circuits to generate.
+        path: Output directory (created if it doesn't exist).
+        contaminated: Whether to apply cone contamination.
+        include_false_cones: Include false positive cones in CSV.
+        include_track_points: Include track spline points in CSV.
+    """
+    os.makedirs(path, exist_ok=True)
+    for _ in tqdm(range(n)):
+        c = generate_circuit()
+        c = populate_cones(c)
+        if contaminated:
+            c = contaminate_cones(c)
+        circuit_to_csv(
+            c,
+            f"{path}/TILKE_generation_{datetime.now().strftime('%d-%m-%Y_%H-%M-%S-%f')}",
+            include_false_cones=include_false_cones,
+            include_track_points=include_track_points,
+        )

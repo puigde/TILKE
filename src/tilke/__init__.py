@@ -11,11 +11,11 @@ from tilke.circuit import (
     circuit_to_image,
     contaminate_cones,
     generate_circuit,
+    get_sample_csv,
     plot_circuit,
     populate_cones,
 )
 from tilke.curve_generator import CurveGeneratorConfig, generate_middle_curve
-from tilke.data_utils import get_sample_csv
 from tilke.spline import Spline, evaluate, make_spline
 
 __all__ = [
