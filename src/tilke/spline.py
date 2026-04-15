@@ -59,10 +59,12 @@ def evaluate(spline: Spline, t: float | np.ndarray, der: int = 0) -> np.ndarray:
     Returns:
         Array of shape (N, 2) for array input, or (2,) for scalar input.
     """
-    return np.array([
-        splev(t, spline.xt, der=der),
-        splev(t, spline.yt, der=der),
-    ]).T
+    return np.array(
+        [
+            splev(t, spline.xt, der=der),
+            splev(t, spline.yt, der=der),
+        ]
+    ).T
 
 
 def get_int_ext_splines(
@@ -84,9 +86,7 @@ def get_int_ext_splines(
     Returns:
         (interior_spline, exterior_spline)
     """
-    steps = np.linspace(
-        spline.t[0], spline.t[-1], math.floor(spline.t[-1] / stepsize)
-    )
+    steps = np.linspace(spline.t[0], spline.t[-1], math.floor(spline.t[-1] / stepsize))
     x_int, x_ext, y_int, y_ext = [], [], [], []
     for s in steps:
         pos = evaluate(spline, s)

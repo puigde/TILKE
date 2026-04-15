@@ -1,9 +1,9 @@
 import numpy as np
 
-from tilke.spline import evaluate, get_int_ext_splines, make_spline
+from tilke.spline import Spline, evaluate, get_int_ext_splines, make_spline
 
 
-def _make_circle_spline() -> "Spline":
+def _make_circle_spline() -> Spline:
     """Helper: create a circular spline for testing."""
     n = 50
     theta = np.linspace(0, 2 * np.pi, n, endpoint=False)

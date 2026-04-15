@@ -19,7 +19,6 @@ from tilke import image_utils
 from tilke.curve_generator import CurveGeneratorConfig, generate_middle_curve
 from tilke.spline import Spline, evaluate, get_int_ext_splines, make_spline
 
-
 # ---------------------------------------------------------------------------
 # Config dataclasses
 # ---------------------------------------------------------------------------
@@ -136,10 +135,7 @@ def generate_circuit(
 
     restrictions_compliant = True
     while True:
-        if middle_curve is None:
-            mid = generate_middle_curve(curve_config)
-        else:
-            mid = middle_curve
+        mid = generate_middle_curve(curve_config) if middle_curve is None else middle_curve
 
         interior, exterior = get_int_ext_splines(
             mid,
@@ -174,9 +170,7 @@ def generate_circuit(
     circuit.restrictions_compliant = restrictions_compliant
 
     # Handle orientation
-    if orientation == "counter_clockwise" or (
-        orientation == "random" and random.random() > 0.5
-    ):
+    if orientation == "counter_clockwise" or (orientation == "random" and random.random() > 0.5):
         smoothing = curve_config.smoothing
         circuit = Circuit(
             middle_curve=make_spline(mid.data[:, ::-1], s=smoothing),
@@ -198,9 +192,7 @@ def generate_circuit(
 
 def _curvature_radius(d1: np.ndarray, d2: np.ndarray) -> float:
     """Compute the radius of curvature from first and second derivatives."""
-    return ((d1[0] ** 2 + d1[1] ** 2) ** (3 / 2)) / np.abs(
-        d1[0] * d2[1] - d1[1] * d2[0]
-    )
+    return ((d1[0] ** 2 + d1[1] ** 2) ** (3 / 2)) / np.abs(d1[0] * d2[1] - d1[1] * d2[0])
 
 
 def check_curvature(circuit: Circuit, restrictions: CircuitRestrictions) -> bool:
@@ -224,14 +216,10 @@ def check_curvature(circuit: Circuit, restrictions: CircuitRestrictions) -> bool
     }
     all_ok = True
     for curve, min_radius, stepsize in curves.values():
-        steps = np.linspace(
-            curve.t[0], curve.t[-1], math.floor(curve.t[-1] / stepsize)
-        )
+        steps = np.linspace(curve.t[0], curve.t[-1], math.floor(curve.t[-1] / stepsize))
         d1 = evaluate(curve, steps, der=1)
         d2 = evaluate(curve, steps, der=2)
-        radii = np.array(
-            [_curvature_radius(d1[i], d2[i]) for i in range(len(steps))]
-        )
+        radii = np.array([_curvature_radius(d1[i], d2[i]) for i in range(len(steps))])
         if np.any(radii < min_radius):
             all_ok = False
     return all_ok
@@ -242,29 +230,21 @@ def check_distances(circuit: Circuit, restrictions: CircuitRestrictions) -> bool
     mid_steps = np.linspace(
         circuit.middle_curve.t[0],
         circuit.middle_curve.t[-1],
-        math.floor(
-            circuit.middle_curve.t[-1] / restrictions.stepsize_middle_distance_checking
-        ),
+        math.floor(circuit.middle_curve.t[-1] / restrictions.stepsize_middle_distance_checking),
     )
     mid_pts = evaluate(circuit.middle_curve, mid_steps)
 
     int_steps = np.linspace(
         circuit.interior_curve.t[0],
         circuit.interior_curve.t[-1],
-        math.floor(
-            circuit.interior_curve.t[-1]
-            / restrictions.stepsize_interior_distance_checking
-        ),
+        math.floor(circuit.interior_curve.t[-1] / restrictions.stepsize_interior_distance_checking),
     )
     int_pts = evaluate(circuit.interior_curve, int_steps)
 
     ext_steps = np.linspace(
         circuit.exterior_curve.t[0],
         circuit.exterior_curve.t[-1],
-        math.floor(
-            circuit.exterior_curve.t[-1]
-            / restrictions.stepsize_exterior_distance_checking
-        ),
+        math.floor(circuit.exterior_curve.t[-1] / restrictions.stepsize_exterior_distance_checking),
     )
     ext_pts = evaluate(circuit.exterior_curve, ext_steps)
 
@@ -325,22 +305,16 @@ def populate_cones(
     )
 
 
-def _populate_naive(
-    circuit: Circuit, n_cones: int
-) -> tuple[np.ndarray, np.ndarray]:
+def _populate_naive(circuit: Circuit, n_cones: int) -> tuple[np.ndarray, np.ndarray]:
     upscale = circuit.exterior_curve.t[-1] / circuit.interior_curve.t[-1]
     n_interior = n_cones // 2
     int_positions = np.linspace(0, circuit.interior_curve.t[-1], n_interior)
     int_cones = np.array([evaluate(circuit.interior_curve, t) for t in int_positions])
-    ext_cones = np.array(
-        [evaluate(circuit.exterior_curve, t * upscale) for t in int_positions]
-    )
+    ext_cones = np.array([evaluate(circuit.exterior_curve, t * upscale) for t in int_positions])
     return int_cones, ext_cones
 
 
-def _populate_perlin(
-    circuit: Circuit, n_cones: int
-) -> tuple[np.ndarray, np.ndarray]:
+def _populate_perlin(circuit: Circuit, n_cones: int) -> tuple[np.ndarray, np.ndarray]:
     upscale = circuit.exterior_curve.t[-1] / circuit.interior_curve.t[-1]
     n_interior = n_cones // 2
     positions = np.linspace(0, circuit.interior_curve.t[-1], n_interior)
@@ -351,9 +325,7 @@ def _populate_perlin(
             positions = positions[: i + 1]
             break
     int_cones = np.array([evaluate(circuit.interior_curve, t) for t in positions])
-    ext_cones = np.array(
-        [evaluate(circuit.exterior_curve, t * upscale) for t in positions]
-    )
+    ext_cones = np.array([evaluate(circuit.exterior_curve, t * upscale) for t in positions])
     return int_cones, ext_cones
 
 
@@ -389,12 +361,8 @@ def _populate_random(
             ext_positions = ext_positions[: i + 1]
             break
 
-    int_cones = np.array(
-        [evaluate(circuit.interior_curve, t) for t in int_positions]
-    )
-    ext_cones = np.array(
-        [evaluate(circuit.exterior_curve, t) for t in ext_positions]
-    )
+    int_cones = np.array([evaluate(circuit.interior_curve, t) for t in int_positions])
+    ext_cones = np.array([evaluate(circuit.exterior_curve, t) for t in ext_positions])
     return int_cones, ext_cones
 
 
@@ -505,13 +473,9 @@ def plot_circuit(circuit: Circuit) -> None:
         plt.plot(gamma[:, 0], gamma[:, 1])
 
     if len(circuit.interior_cones) > 0:
-        plt.scatter(
-            circuit.interior_cones[:, 0], circuit.interior_cones[:, 1], c="blue", s=10
-        )
+        plt.scatter(circuit.interior_cones[:, 0], circuit.interior_cones[:, 1], c="blue", s=10)
     if len(circuit.exterior_cones) > 0:
-        plt.scatter(
-            circuit.exterior_cones[:, 0], circuit.exterior_cones[:, 1], c="orange", s=10
-        )
+        plt.scatter(circuit.exterior_cones[:, 0], circuit.exterior_cones[:, 1], c="orange", s=10)
     if len(circuit.false_cones) > 0:
         plt.plot(circuit.false_cones[:, 0], circuit.false_cones[:, 1], "xr")
 
@@ -575,12 +539,8 @@ def circuit_to_image(
         ax2.plot(gamma[:, 0], gamma[:, 1], color=label_colors[name])
 
     # Zone polygons
-    int_xy = np.column_stack(
-        (curves_data["interior"][:, 0], curves_data["interior"][:, 1])
-    )
-    ext_xy = np.column_stack(
-        (curves_data["exterior"][:, 0], curves_data["exterior"][:, 1])
-    )
+    int_xy = np.column_stack((curves_data["interior"][:, 0], curves_data["interior"][:, 1]))
+    ext_xy = np.column_stack((curves_data["exterior"][:, 0], curves_data["exterior"][:, 1]))
     ax.add_patch(Polygon(ext_xy, facecolor=zone_colors["track"], alpha=1, edgecolor="none"))
     ax.add_patch(Polygon(int_xy, facecolor=zone_colors["inside"], alpha=1, edgecolor="none"))
     ax2.add_patch(Polygon(ext_xy, facecolor=label_zone_colors["track"], alpha=1, edgecolor="none"))
@@ -658,7 +618,7 @@ def circuit_to_csv(
                 circuit.interior_curve,
                 circuit.middle_curve,
             ]
-            for title, curve in zip(titles, curves):
+            for title, curve in zip(titles, curves, strict=True):
                 writer.writerow([title])
                 for i in range(curve.data.shape[1]):
                     writer.writerow(

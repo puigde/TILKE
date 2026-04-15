@@ -57,9 +57,7 @@ class Segment:
         p = np.zeros((4, 2))
         p[0] = self.p1
         p[3] = self.p2
-        p[1] = self.p1 + scaled_r * np.array(
-            [np.cos(self.angle1), np.sin(self.angle1)]
-        )
+        p[1] = self.p1 + scaled_r * np.array([np.cos(self.angle1), np.sin(self.angle1)])
         p[2] = self.p2 + scaled_r * np.array(
             [np.cos(self.angle2 + np.pi), np.sin(self.angle2 + np.pi)]
         )
@@ -96,9 +94,7 @@ def bezier(points: np.ndarray, num: int = 200) -> np.ndarray:
     return curve
 
 
-def _build_bezier_segments(
-    points: np.ndarray, r: float = 0.3
-) -> tuple[list[Segment], np.ndarray]:
+def _build_bezier_segments(points: np.ndarray, r: float = 0.3) -> tuple[list[Segment], np.ndarray]:
     """Build connected bezier segments through annotated control points.
 
     Args:
