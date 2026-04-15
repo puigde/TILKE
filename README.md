@@ -28,14 +28,16 @@ Every call produces a different layout. Pin a seed for reproducibility:
 circuit = generate_circuit(seed=1337)
 ```
 
+![](media/seeds.gif)
+
 ## Place cones along the track
 
 Three placement strategies — uniform, Perlin noise offset, or fully random:
 
 ```python
-circuit = populate_cones(circuit, method="naive")    # uniform spacing
-circuit = populate_cones(circuit, method="perlin")   # noise-offset (default)
-circuit = populate_cones(circuit, method="random")   # random count per side
+populate_cones(circuit, method="naive")
+populate_cones(circuit, method="perlin")   # default
+populate_cones(circuit, method="random")
 ```
 
 ![](media/cones.gif)
