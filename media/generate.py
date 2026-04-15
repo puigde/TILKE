@@ -11,7 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tilke import generate_circuit, populate_cones, contaminate_cones, ConePopulationParameters
+from tilke import generate_circuit, populate_cones, contaminate_cones
 from tilke.spline import evaluate
 
 
@@ -55,7 +55,6 @@ def _make_frame(circuit, title: str | None = None, bounds=None,
                 show_middle: bool = False) -> plt.Figure:
     """Create a single frame figure."""
     fig, ax = plt.subplots(figsize=(6, 6))
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.93, bottom=0.02)
     ax.set_aspect("equal")
     ax.axis("off")
     if title:
@@ -68,7 +67,7 @@ def _make_frame(circuit, title: str | None = None, bounds=None,
 
 
 def _save_frame(fig: plt.Figure, path: Path) -> None:
-    fig.savefig(path, dpi=150, facecolor="white")
+    fig.savefig(path, dpi=150, facecolor="white", bbox_inches="tight", pad_inches=0.2)
     plt.close(fig)
 
 
@@ -172,12 +171,7 @@ def generate_contamination_gif() -> None:
         c = generate_circuit(seed=42)
         bounds = _circuit_bounds(c)
         c_clean = populate_cones(c, method="perlin")
-        # Soft contamination for a subtle, realistic demo
-        soft_params = ConePopulationParameters(
-            false_negative_probability=0.05,
-            false_positive_probability=0.03,
-        )
-        c_noisy = contaminate_cones(c_clean, soft_params)
+        c_noisy = contaminate_cones(c_clean)
         for i, (title, circuit) in enumerate([
             ("Clean cones", c_clean),
             ("Simulated detection", c_noisy),

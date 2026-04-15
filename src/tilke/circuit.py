@@ -452,8 +452,8 @@ def _generate_false_cones(
         return np.empty((0, 2))
     min_x, min_y = reference_cones.min(axis=0)
     max_x, max_y = reference_cones.max(axis=0)
-    max_x += random.uniform(0, 80)
-    max_y += random.uniform(0, 80)
+    max_x += random.uniform(0, 10)
+    max_y += random.uniform(0, 10)
     # Determine how many false cones to generate (binomial draw)
     n_false = np.random.binomial(total_cone_count, false_positive_prob)
     if n_false == 0:
